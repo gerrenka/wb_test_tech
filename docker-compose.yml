@@ -1,3 +1,4 @@
+version: '3'
 
 services:
   zookeeper:
@@ -26,6 +27,47 @@ services:
       - "9093:9092"
     networks:
       - kafka_network
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: my_user
+      POSTGRES_PASSWORD: 1
+      POSTGRES_DB: my_database
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    networks:
+      - kafka_network
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - postgres
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=my_user
+      - DB_PASSWORD=1
+      - DB_NAME=my_database
+      - DB_SSL_MODE=disable
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=orders
+      - KAFKA_GROUP_ID=order-consumer-group
+      - SERVER_PORT=8081
+    networks:
+      - kafka_network
+
+volumes:
+  postgres-data:
 
 networks:
   kafka_network:

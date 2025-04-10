@@ -3,13 +3,19 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
-	"log"
-	"net/http"
-	"html/template"
+	//"encoding/json"
+	// "fmt"
+	// "html/template"
+	"log/slog"
+	// "net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 
-	"github.com/segmentio/kafka-go"
 	_ "github.com/lib/pq"
+	//"github.com/segmentio/kafka-go"
 )
 
 // Order represents the structure of messages from Kafka
@@ -17,174 +23,115 @@ type Order struct {
 	OrderUID string `json:"order_uid"`
 }
 
-// Global cache
-var cache = make(map[string]struct{})
-
-// Connect to PostgreSQL
-func connectToDB() (*sql.DB, error) {
-	connStr := "host=localhost port=5434 user=my_user password=1 dbname=my_database sslmode=disable"
-	return sql.Open("postgres", connStr)
+// Cache structure with mutex protection
+type Cache struct {
+	mu    sync.RWMutex
+	items map[string]struct{}
 }
 
-// Save order to PostgreSQL
-
-
-func saveOrderToDB(db *sql.DB, order Order) error {
-	log.Printf("Запись в БД: OrderUID=%s", order.OrderUID)
-	query := `
-		INSERT INTO orders (order_uid)
-		VALUES ($1)
-		ON CONFLICT (order_uid) DO NOTHING;
-	`
-	_, err := db.Exec(query, order.OrderUID)
-	if err != nil {
-		log.Printf("Ошибка записи в БД: %v", err)
+// NewCache creates a new cache instance
+func NewCache() *Cache {
+	return &Cache{
+		items: make(map[string]struct{}),
 	}
-	return err
 }
 
-// Update the cache
-func updateCache(orderUID string) {
-	cache[orderUID] = struct{}{}
-	log.Printf("Кэш обновлён: Key=%s", orderUID)
+// Set adds an item to the cache
+func (c *Cache) Set(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items[key] = struct{}{}
+	slog.Info("Cache updated", "key", key)
 }
 
-// Check if order exists in cache
-func checkCache(orderUID string) bool {
-	_, found := cache[orderUID]
-	log.Printf("Проверка в кэше: Key=%s, Найден=%v", orderUID, found)
+// Has checks if an item exists in the cache
+func (c *Cache) Has(key string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	_, found := c.items[key]
+	slog.Debug("Cache check", "key", key, "found", found)
 	return found
 }
 
-// Initialize cache from database
-func initializeCache(db *sql.DB) error {
-	rows, err := db.Query("SELECT order_uid FROM orders")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var orderUID string
-		if err := rows.Scan(&orderUID); err != nil {
-			return err
-		}
-		cache[orderUID] = struct{}{}
-	}
-	log.Println("Кэш успешно инициализирован из базы данных")
-	return nil
+// Delete removes an item from the cache
+func (c *Cache) Delete(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.items, key)
+	slog.Info("Removed from cache", "key", key)
 }
 
-// Print cache content for debugging
-func printCache() {
-	log.Println("Текущее содержимое кэша:")
-	for key := range cache {
-		log.Printf("Key: %s", key)
+// PrintContent dumps the cache content for debugging
+func (c *Cache) PrintContent() {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	slog.Info("Current cache content")
+	for key := range c.items {
+		slog.Debug("Cache item", "key", key)
 	}
 }
 
-// HTTP handler for fetching order details
-func getOrderHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		orderUID := r.URL.Query().Get("id")
-		if orderUID == "" {
-			http.Error(w, "Параметр 'id' обязателен", http.StatusBadRequest)
-			return
-		}
-
-		if checkCache(orderUID) {
-			tmpl := template.Must(template.New("order").Parse(`
-				<html>
-				<head><title>Информация о заказе</title></head>
-				<body>
-					<h1>Заказ найден</h1>
-					<p>Идентификатор заказа: {{.}}</p>
-				</body>
-				</html>
-			`))
-			tmpl.Execute(w, orderUID)
-			return
-		}
-
-		var foundUID string
-		err := db.QueryRow("SELECT order_uid FROM orders WHERE order_uid = $1", orderUID).Scan(&foundUID)
-		if err == sql.ErrNoRows {
-			http.Error(w, "Заказ не найден", http.StatusNotFound)
-			return
-		} else if err != nil {
-			http.Error(w, "Ошибка при запросе к БД", http.StatusInternalServerError)
-			return
-		}
-
-		tmpl := template.Must(template.New("order").Parse(`
-			<html>
-			<head><title>Информация о заказе</title></head>
-			<body>
-				<h1>Заказ найден</h1>
-				<p>Идентификатор заказа: {{.}}</p>
-			</body>
-			</html>
-		`))
-		tmpl.Execute(w, foundUID)
-	}
+// Connect to PostgreSQL
+func connectToDB(connStr string) (*sql.DB, error) {
+	slog.Info("Connecting to database")
+	return sql.Open("postgres", connStr)
 }
 
 func main() {
-	db, err := connectToDB()
-	if err != nil {
-		log.Fatalf("Ошибка подключения к БД: %v", err)
-	}
-	defer db.Close()
-
-	if err := initializeCache(db); err != nil {
-		log.Fatalf("Ошибка инициализации кэша: %v", err)
-	}
-
-	printCache()
+	// Initialize JSON logger
+	InitLogger()
 	
-	go func() {
-		reader := kafka.NewReader(kafka.ReaderConfig{
-			Brokers: []string{"localhost:9092"},
-			Topic:   "orders",
-			GroupID: "order-consumer-group",
-		})
-		defer reader.Close()
+	slog.Info("Application starting")
 
-		log.Println("Подписка на топик Kafka: orders")
+	// Load configuration
+	config, err := NewConfig()
+	if err != nil {
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
+	}
 
-		for {
-			msg, err := reader.ReadMessage(context.Background())
-			if err != nil {
-				log.Printf("Ошибка чтения сообщения: %v", err)
-				continue
-			}
-			log.Printf("Сырой JSON из Kafka: %s", string(msg.Value))
+	slog.Info("Configuration loaded", 
+		"db_host", config.DBHost,
+		"db_port", config.DBPort,
+		"kafka_topic", config.KafkaTopic,
+		"server_port", config.ServerPort)
 
+	// Create application
+	app, err := NewApplication(config)
+	if err != nil {
+		slog.Error("Failed to create application", "error", err)
+		os.Exit(1)
+	}
 
-			log.Printf("Получено сообщение: %s", string(msg.Value))
-			var order Order
-			if err := json.Unmarshal(msg.Value, &order); err != nil {
-				log.Printf("Ошибка разбора сообщения: %v", err)
-				continue
-			}
-			log.Printf("Сообщение разобрано успешно: %+v", order)
+	// Print cache content for debugging
+	app.cache.PrintContent()
 
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-			if checkCache(order.OrderUID) {
-				log.Printf("Заказ %s уже обработан, пропускаем", order.OrderUID)
-				continue
-			}
+	// Start application
+	if err := app.Start(ctx); err != nil {
+		slog.Error("Failed to start application", "error", err)
+		os.Exit(1)
+	}
 
-			if err := saveOrderToDB(db, order); err != nil {
-				continue
-			}
+	// Set up graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-			updateCache(order.OrderUID)
-			log.Printf("Сообщение обработано: %v", order)
-		}
-	}()
+	// Wait for shutdown signal
+	<-stop
+	slog.Info("Shutdown signal received, gracefully shutting down...")
 
-	http.HandleFunc("/order", getOrderHandler(db))
-	log.Println("HTTP-сервер запущен на http://localhost:8081")
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	// Create a deadline for shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	// Shutdown application
+	if err := app.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Error during shutdown", "error", err)
+	}
+
+	slog.Info("Shutdown completed")
 }
