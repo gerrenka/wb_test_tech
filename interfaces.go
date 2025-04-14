@@ -8,7 +8,6 @@ import (
     "html/template"
     "log/slog"
     "net/http"
-    //"sync"
     "time"
 
     "github.com/segmentio/kafka-go"

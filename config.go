@@ -6,7 +6,6 @@ import (
 	"strconv"
 )
 
-// Config holds all configuration for the application
 type Config struct {
 	// PostgreSQL
 	DBHost     string
@@ -25,7 +24,6 @@ type Config struct {
 	ServerPort int
 }
 
-// NewConfig creates a new Config with values from environment variables
 func NewConfig() (*Config, error) {
 	config := &Config{
 		// PostgreSQL defaults
@@ -57,7 +55,6 @@ func NewConfig() (*Config, error) {
 	return config, nil
 }
 
-// GetDBConnString returns the PostgreSQL connection string
 func (c *Config) GetDBConnString() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -65,7 +62,6 @@ func (c *Config) GetDBConnString() string {
 	)
 }
 
-// Helper functions to get environment variables
 func getEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {
