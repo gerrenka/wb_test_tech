@@ -6,30 +6,27 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
-	//"os"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
+	//"order-service/internal/models" // Можно подключить модели проекта
 )
 
-// Order represents the basic structure of an order message
 type Order struct {
 	OrderUID string `json:"order_uid"`
 }
 
-// Config holds the configuration for the order generator
 type Config struct {
-	KafkaBrokers  []string
-	KafkaTopic    string
-	Count         int
-	Interval      time.Duration
-	PrintOnly     bool
+	KafkaBrokers []string
+	KafkaTopic   string
+	Count        int
+	Interval     time.Duration
+	PrintOnly    bool
 }
 
 func main() {
-	// Parse command line arguments
 	var (
 		brokers   = flag.String("brokers", "localhost:9093", "Kafka broker address")
 		topic     = flag.String("topic", "orders", "Kafka topic to send orders to")
@@ -40,17 +37,13 @@ func main() {
 	flag.Parse()
 
 	config := Config{
-		KafkaBrokers:  []string{*brokers},
-		KafkaTopic:    *topic,
-		Count:         *count,
-		Interval:      time.Duration(*interval) * time.Millisecond,
-		PrintOnly:     *printOnly,
+		KafkaBrokers: []string{*brokers},
+		KafkaTopic:   *topic,
+		Count:        *count,
+		Interval:     time.Duration(*interval) * time.Millisecond,
+		PrintOnly:    *printOnly,
 	}
 
-	// Initialize random seed
-	rand.Seed(time.Now().UnixNano())
-
-	// Create Kafka writer if needed
 	var writer *kafka.Writer
 	if !config.PrintOnly {
 		writer = &kafka.Writer{
@@ -58,19 +51,21 @@ func main() {
 			Topic:    config.KafkaTopic,
 			Balancer: &kafka.LeastBytes{},
 		}
-		defer writer.Close()
+		defer func() {
+			if err := writer.Close(); err != nil {
+				slog.Error("failed to close writer", "error", err)
+			}
+		}()
+		
 		fmt.Printf("Connected to Kafka at %s\n", config.KafkaBrokers)
 	}
 
 	fmt.Printf("Generating %d orders with %v interval\n", config.Count, config.Interval)
 
-	// Generate and send orders
 	for i := 0; i < config.Count; i++ {
-		// Generate a unique order ID
 		orderUID := generateOrderUID()
 		order := Order{OrderUID: orderUID}
 
-		// Convert to JSON
 		orderJSON, err := json.Marshal(order)
 		if err != nil {
 			log.Printf("Error marshaling order to JSON: %v", err)
@@ -78,10 +73,8 @@ func main() {
 		}
 
 		if config.PrintOnly {
-			// Just print the JSON
 			fmt.Printf("Order %d: %s\n", i+1, string(orderJSON))
 		} else {
-			// Send to Kafka
 			err = writer.WriteMessages(context.Background(),
 				kafka.Message{
 					Key:   []byte(orderUID),
@@ -95,7 +88,6 @@ func main() {
 			}
 		}
 
-		// Wait before sending the next order
 		if i < config.Count-1 && config.Interval > 0 {
 			time.Sleep(config.Interval)
 		}
@@ -104,7 +96,6 @@ func main() {
 	fmt.Println("Order generation completed")
 }
 
-// generateOrderUID creates a unique order identifier
 func generateOrderUID() string {
 	return uuid.New().String()
 }

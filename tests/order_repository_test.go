@@ -14,7 +14,12 @@ func TestPostgresRepository_SaveOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ошибка при создании мока БД: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close db", "error", err)
+		}
+	}()
+	
 
 	// Создаем репозиторий с моком БД
 	repo := NewPostgresRepository(db)
@@ -54,7 +59,12 @@ func TestPostgresRepository_GetOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ошибка при создании мока БД: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close db", "error", err)
+		}
+	}()
+	
 
 	// Создаем репозиторий с моком БД
 	repo := NewPostgresRepository(db)
@@ -65,7 +75,7 @@ func TestPostgresRepository_GetOrder(t *testing.T) {
 	// Настраиваем ожидание запроса
 	rows := sqlmock.NewRows([]string{"order_uid"}).
 		AddRow(orderUID)
-	mock.ExpectQuery("SELECT order_uid FROM orders WHERE order_uid = ?").
+	mock.ExpectQuery("SELECT order_uid FROM orders WHERE order_uid = \\$1").
 		WithArgs(orderUID).
 		WillReturnRows(rows)
 
@@ -78,7 +88,7 @@ func TestPostgresRepository_GetOrder(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 
 	// Тестируем случай, когда заказ не найден
-	mock.ExpectQuery("SELECT order_uid FROM orders WHERE order_uid = ?").
+	mock.ExpectQuery("SELECT order_uid FROM orders WHERE order_uid = \\$1").
 		WithArgs("not-found").
 		WillReturnError(sqlmock.ErrNoRows)
 
@@ -96,7 +106,12 @@ func TestPostgresRepository_GetAllOrders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ошибка при создании мока БД: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			slog.Error("failed to close db", "error", err)
+		}
+	}()
+	
 
 	// Создаем репозиторий с моком БД
 	repo := NewPostgresRepository(db)

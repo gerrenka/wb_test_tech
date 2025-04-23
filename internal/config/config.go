@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -50,7 +50,7 @@ func NewConfig() (*Config, error) {
 
 	// Kafka brokers
 	brokers := getEnv("KAFKA_BROKERS", "localhost:9092")
-	config.KafkaBrokers = []string{brokers} // For multiple brokers, split the string
+	config.KafkaBrokers = []string{brokers}
 
 	return config, nil
 }
