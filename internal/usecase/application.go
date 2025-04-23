@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"order-service/internal/config"
-	"order-service/pkg/interfaces"
+	"order-service/internal/domain"
 )
 
 type Application struct {
