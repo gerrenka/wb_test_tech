@@ -11,12 +11,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
-	//"order-service/internal/models" // Можно подключить модели проекта
+	"order-service/internal/domain/models"
 )
-
-type Order struct {
-	OrderUID string `json:"order_uid"`
-}
 
 type Config struct {
 	KafkaBrokers []string
@@ -63,8 +59,9 @@ func main() {
 	fmt.Printf("Generating %d orders with %v interval\n", config.Count, config.Interval)
 
 	for i := 0; i < config.Count; i++ {
-		orderUID := generateOrderUID()
-		order := Order{OrderUID: orderUID}
+        orderUID := generateOrderUID()
+        order := models.Order{OrderUID: orderUID}
+    
 
 		orderJSON, err := json.Marshal(order)
 		if err != nil {
