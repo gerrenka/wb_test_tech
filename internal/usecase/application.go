@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"order-service/internal/config"
-	"order-service/internal/domain"
+	"order-service/pkg/interfaces"
 )
 
 type Application struct {
@@ -14,7 +14,7 @@ type Application struct {
 	cache  interfaces.CacheRepository
 	kafka  interfaces.KafkaConsumer
 	http   interfaces.HTTPServer
-	config *config.Config // пока оставляем Config здесь, поправим на следующем маленьком шаге
+	config *config.Config
 }
 
 func NewApplication(config *config.Config, repo interfaces.OrderRepository, cache interfaces.CacheRepository, kafka interfaces.KafkaConsumer, http interfaces.HTTPServer) *Application {
