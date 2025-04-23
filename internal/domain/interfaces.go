@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"context"
-	"order-service/internal/models"
+	"order-service/internal/domain/models"
 )
 
 type SomeInterface interface {

@@ -14,14 +14,6 @@ import (
 	"order-service/internal/domain/models"
 )
 
-type Config struct {
-	KafkaBrokers []string
-	KafkaTopic   string
-	Count        int
-	Interval     time.Duration
-	PrintOnly    bool
-}
-
 func main() {
 	var (
 		brokers   = flag.String("brokers", "localhost:9093", "Kafka broker address")
@@ -32,7 +24,7 @@ func main() {
 	)
 	flag.Parse()
 
-	config := Config{
+	config := models.GeneratorConfig{
 		KafkaBrokers: []string{*brokers},
 		KafkaTopic:   *topic,
 		Count:        *count,
