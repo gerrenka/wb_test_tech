@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"order-service/internal/models"
+	"order-service/internal/domain/models"
 	"order-service/pkg/interfaces"
 
 	"github.com/segmentio/kafka-go"

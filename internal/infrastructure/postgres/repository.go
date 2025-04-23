@@ -3,7 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"log/slog"
-	"order-service/internal/models"
+	"order-service/internal/domain/models"
 
 	_ "github.com/lib/pq"
 )
