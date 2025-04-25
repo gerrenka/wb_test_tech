@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
-	
+
 	"order-service/internal/domain/models"
 )
 
@@ -69,7 +69,7 @@ func main() {
 				slog.Error("failed to close writer", "error", err)
 			}
 		}()
-		
+
 		fmt.Printf("Connected to Kafka at %s\n", config.KafkaBrokers)
 	}
 
@@ -113,7 +113,7 @@ func generateRandomOrder() models.Order {
 	orderUID := uuid.New().String()
 	trackNumber := fmt.Sprintf("TRACK%d", rand.Intn(1000000))
 	now := time.Now()
-	
+
 	return models.Order{
 		OrderUID:    orderUID,
 		TrackNumber: trackNumber,
@@ -154,12 +154,12 @@ func generateRandomOrder() models.Order {
 // Генерация случайных товаров
 func generateRandomItems(trackNumber string, count int) []models.Item {
 	items := make([]models.Item, count)
-	
+
 	for i := 0; i < count; i++ {
 		price := float64(rand.Intn(5000) + 100)
 		sale := rand.Intn(50)
 		totalPrice := price * (1 - float64(sale)/100)
-		
+
 		items[i] = models.Item{
 			ChrtID:      int64(rand.Intn(10000000) + 1000000),
 			TrackNumber: trackNumber,
@@ -174,15 +174,15 @@ func generateRandomItems(trackNumber string, count int) []models.Item {
 			Status:      rand.Intn(500) + 100,
 		}
 	}
-	
+
 	return items
 }
 
 // Вспомогательные функции для генерации случайных данных
 func randomCity() string {
 	cities := []string{
-		"Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", 
-		"Казань", "Нижний Новгород", "Самара", "Омск", 
+		"Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург",
+		"Казань", "Нижний Новгород", "Самара", "Омск",
 		"Ростов-на-Дону", "Уфа",
 	}
 	return cities[rand.Intn(len(cities))]
@@ -190,7 +190,7 @@ func randomCity() string {
 
 func randomStreet() string {
 	streets := []string{
-		"Ленина", "Мира", "Гагарина", "Пушкина", "Советская", 
+		"Ленина", "Мира", "Гагарина", "Пушкина", "Советская",
 		"Молодежная", "Центральная", "Школьная", "Лесная", "Садовая",
 	}
 	return streets[rand.Intn(len(streets))]
@@ -198,7 +198,7 @@ func randomStreet() string {
 
 func randomRegion() string {
 	regions := []string{
-		"Московская область", "Ленинградская область", "Свердловская область", 
+		"Московская область", "Ленинградская область", "Свердловская область",
 		"Новосибирская область", "Республика Татарстан", "Краснодарский край",
 	}
 	return regions[rand.Intn(len(regions))]
@@ -226,11 +226,11 @@ func randomDeliveryService() string {
 
 func randomProductName() string {
 	products := []string{
-		"Футболка", "Джинсы", "Куртка", "Платье", "Рубашка", 
+		"Футболка", "Джинсы", "Куртка", "Платье", "Рубашка",
 		"Брюки", "Юбка", "Свитер", "Шапка", "Перчатки",
-		"Наушники", "Смартфон", "Ноутбук", "Клавиатура", "Мышь", 
+		"Наушники", "Смартфон", "Ноутбук", "Клавиатура", "Мышь",
 		"Монитор", "Планшет", "Колонки", "Часы", "Зарядка",
-		"Кроссовки", "Ботинки", "Туфли", "Сандалии", "Кеды", 
+		"Кроссовки", "Ботинки", "Туфли", "Сандалии", "Кеды",
 		"Тапочки", "Шлепанцы", "Сапоги",
 	}
 	return products[rand.Intn(len(products))]
@@ -238,11 +238,11 @@ func randomProductName() string {
 
 func randomBrand() string {
 	brands := []string{
-		"Nike", "Adidas", "Puma", "Reebok", "Samsung", "Apple", 
-		"Xiaomi", "Huawei", "LG", "Sony", "Zara", "H&M", 
-		"Pull&Bear", "Bershka", "ASOS", "Lacoste", 
-		"Tommy Hilfiger", "Calvin Klein", "Lenovo", "HP", 
-		"Dell", "Asus", "Logitech", "JBL", "Sennheiser", 
+		"Nike", "Adidas", "Puma", "Reebok", "Samsung", "Apple",
+		"Xiaomi", "Huawei", "LG", "Sony", "Zara", "H&M",
+		"Pull&Bear", "Bershka", "ASOS", "Lacoste",
+		"Tommy Hilfiger", "Calvin Klein", "Lenovo", "HP",
+		"Dell", "Asus", "Logitech", "JBL", "Sennheiser",
 		"Bosch", "Philips",
 	}
 	return brands[rand.Intn(len(brands))]
