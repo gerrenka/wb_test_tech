@@ -1,0 +1,16 @@
+FROM golang:1.22-alpine
+
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GO111MODULE=on
+
+# Устанавливаем общие зависимости
+RUN apk add --no-cache git ca-certificates tzdata curl
+
+# Создаем временный модуль для предзагрузки общих зависимостей
+WORKDIR /deps
+RUN echo "module deps" > go.mod && \
+    echo "go 1.22" >> go.mod && \
+    go get github.com/google/uuid && \
+    go get github.com/segmentio/kafka-go && \
+    go mod download all

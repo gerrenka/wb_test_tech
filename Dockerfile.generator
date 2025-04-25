@@ -1,0 +1,37 @@
+FROM go-base:latest AS builder
+
+# Создаем рабочую директорию
+WORKDIR /build
+
+# Копируем только go.mod и go.sum для лучшего кэширования
+COPY go.mod go.sum ./
+
+# Явно добавляем зависимости в модуль
+RUN go get github.com/google/uuid && \
+    go get github.com/segmentio/kafka-go && \
+    go mod tidy
+
+# Теперь копируем весь проект
+COPY . .
+
+# Компилируем генератор
+RUN go build -o /order-generator ./cmd/generator
+
+# Финальный образ
+FROM alpine:latest
+WORKDIR /app
+
+# Устанавливаем необходимые пакеты
+RUN apk --no-cache add ca-certificates tzdata
+
+# Копируем бинарный файл
+COPY --from=builder /order-generator .
+
+# Настройка переменных окружения
+ENV BROKERS=kafka:9092 \
+    TOPIC=orders \
+    COUNT=20 \
+    INTERVAL=2000
+
+# Запуск генератора
+CMD ["./order-generator"]

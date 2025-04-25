@@ -1,77 +1,107 @@
 version: '3'
 
 services:
+  # Infrastructure services
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: confluentinc/cp-zookeeper:latest
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2182:2181"
-    networks:
-      - kafka_network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:latest
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9094:9092"
+      - "9093:9093"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-    ports:
-      - "9093:9092"
-    networks:
-      - kafka_network
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
-    image: postgres:16
+    image: postgres:14-alpine
     environment:
       POSTGRES_USER: my_user
       POSTGRES_PASSWORD: 1
       POSTGRES_DB: my_database
     ports:
-      - "5434:5432"
+      - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./migrations/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
-    networks:
-      - kafka_network
+      - postgres_data:/var/lib/postgresql/data
+      - ./create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U my_user -d my_database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-
+  # Main service
   order-service:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        APP_DIR: cmd/app
-    restart: unless-stopped
     depends_on:
-      - kafka
-      - postgres
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=my_user
-      - DB_PASSWORD=1
-      - DB_NAME=my_database
-      - DB_SSL_MODE=disable
-      - KAFKA_BROKERS=kafka:9092
-      - KAFKA_TOPIC=orders
-      - KAFKA_GROUP_ID=order-consumer-group
-      - SERVER_PORT=8081
-    networks:
-      - kafka_network
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: my_user
+      DB_PASSWORD: 1
+      DB_NAME: my_database
+      DB_SSL_MODE: disable
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: orders
+      KAFKA_GROUP_ID: order-consumer-group
+      SERVER_PORT: 8081
+      CACHE_TTL: 30m
+    volumes:
+      - ./templates:/app/templates
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Order generator
+  order-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile.generator
+    depends_on:
+      kafka:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    environment:
+      BROKERS: kafka:9092
+      TOPIC: orders
+      COUNT: 20
+      INTERVAL: 2000
 
 volumes:
-  postgres-data:
-
-networks:
-  kafka_network:
-    driver: bridge
+  postgres_data:

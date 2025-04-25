@@ -2,9 +2,202 @@
 <html>
 <head>
     <title>Информация о заказе</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .order-info {
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .section h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        .info-label {
+            font-weight: bold;
+            width: 200px;
+        }
+        .info-value {
+            flex: 1;
+        }
+    </style>
 </head>
 <body>
-    <h1>Заказ найден</h1>
-    <p>Идентификатор заказа: {{.}}</p>
+    <div class="container">
+        <h1>Заказ найден</h1>
+        
+        <div class="section order-info">
+            <h2>Основная информация</h2>
+            <div class="info-row">
+                <div class="info-label">ID заказа:</div>
+                <div class="info-value">{{.OrderUID}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Трек-номер:</div>
+                <div class="info-value">{{.TrackNumber}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Entry:</div>
+                <div class="info-value">{{.Entry}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Локаль:</div>
+                <div class="info-value">{{.Locale}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">ID клиента:</div>
+                <div class="info-value">{{.CustomerID}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Служба доставки:</div>
+                <div class="info-value">{{.DeliveryService}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Дата создания:</div>
+                <div class="info-value">{{.DateCreated.Format "02.01.2006 15:04:05"}}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Информация о доставке</h2>
+            <div class="info-row">
+                <div class="info-label">Имя:</div>
+                <div class="info-value">{{.Delivery.Name}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Телефон:</div>
+                <div class="info-value">{{.Delivery.Phone}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Индекс:</div>
+                <div class="info-value">{{.Delivery.Zip}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Город:</div>
+                <div class="info-value">{{.Delivery.City}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Адрес:</div>
+                <div class="info-value">{{.Delivery.Address}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Регион:</div>
+                <div class="info-value">{{.Delivery.Region}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Email:</div>
+                <div class="info-value">{{.Delivery.Email}}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Информация об оплате</h2>
+            <div class="info-row">
+                <div class="info-label">Транзакция:</div>
+                <div class="info-value">{{.Payment.Transaction}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Валюта:</div>
+                <div class="info-value">{{.Payment.Currency}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Провайдер:</div>
+                <div class="info-value">{{.Payment.Provider}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Сумма:</div>
+                <div class="info-value">{{.Payment.Amount}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Банк:</div>
+                <div class="info-value">{{.Payment.Bank}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Стоимость доставки:</div>
+                <div class="info-value">{{.Payment.DeliveryCost}}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Стоимость товаров:</div>
+                <div class="info-value">{{.Payment.GoodsTotal}}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Товары</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Наименование</th>
+                        <th>Бренд</th>
+                        <th>Цена</th>
+                        <th>Итого</th>
+                        <th>Скидка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Items}}
+                    <tr>
+                        <td>{{.Name}}</td>
+                        <td>{{.Brand}}</td>
+                        <td>{{.Price}}</td>
+                        <td>{{.TotalPrice}}</td>
+                        <td>{{.Sale}}%</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </body>
 </html>

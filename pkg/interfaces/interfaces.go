@@ -1,3 +1,4 @@
+// pkg/interfaces/interfaces.go
 package interfaces
 
 import (
@@ -5,13 +6,10 @@ import (
 	"order-service/internal/domain/models"
 )
 
-type SomeInterface interface {
-	ProcessOrder(order models.Order) error
-}
-
 // CacheRepository представляет интерфейс для кеширования
 type CacheRepository interface {
-	Set(key string)
+	Set(key string, data []byte)
+	Get(key string) ([]byte, bool)
 	Has(key string) bool
 	Delete(key string)
 	PrintContent()
@@ -19,9 +17,11 @@ type CacheRepository interface {
 
 // OrderRepository представляет интерфейс для работы с заказами в БД
 type OrderRepository interface {
-	SaveOrder(order models.Order) error
-	GetOrder(orderUID string) (string, error)
+	SaveOrder(ctx context.Context, order models.Order) error
+	GetOrder(ctx context.Context, orderUID string) (*models.Order, error)
 	GetAllOrders() ([]string, error)
+	CacheOrderData(orderUID string, orderData []byte) error
+	GetCachedOrderData(orderUID string) ([]byte, error)
 }
 
 // KafkaConsumer представляет интерфейс для работы с Kafka
